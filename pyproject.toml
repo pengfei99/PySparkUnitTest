@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "PySparkUnitTest"
+version = "0.1.0"
+description = "In this project we show how to do unit test in pyspark"
+license = "MIT"
+authors = ["Pengfei Liu <liu.pengfei@hotmail.fr>"]
+readme = 'README.md'  # Markdown files are supported
+repository = "https://github.com/pengfei99/PySparkUnitTest.git"
+homepage = "https://github.com/pengfei99/PySparkUnitTest.git"
+
+keywords = ['pyspark', 'unittest']
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pyspark = "^3.1.1"
+quinn = "^0.9.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+chispa = "^0.8.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
