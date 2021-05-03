@@ -1,8 +1,10 @@
-from pyspark.sql.types import StructType, StructField, StringType
-
-from pysparkunittest.AddGreetings import add_greeting
 from chispa.dataframe_comparer import assert_df_equality
 
+from pysparkunittest.AddGreetings import add_greeting
+
+
+# To run all test of a project via poetry cli:  poetry run pytest
+# To run a specific test : poetry run pytest tests/test_AddGreetings.py
 
 def test_add_greeting(spark):
     source_data = [
@@ -23,4 +25,4 @@ def test_add_greeting(spark):
     source_df.show()
     actual_df.show()
     expected_df.show()
-    assert_df_equality(actual_df, expected_df,ignore_nullable=True)
+    assert_df_equality(actual_df, expected_df, ignore_nullable=True)
