@@ -1,6 +1,6 @@
 import pytest
-from chispa.column_comparer import assert_column_equality
-from chispa.dataframe_comparer import assert_df_equality
+from chispa.column_comparer import assert_column_equality, assert_approx_column_equality
+from chispa.dataframe_comparer import assert_df_equality, assert_approx_df_equality
 
 from pysparkunittest.CleanUserName import remove_special_letter_quinn, remove_special_letter_native, remove_space
 

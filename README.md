@@ -26,7 +26,14 @@ poetry new <project-name>
 
 # example
 poetry new PythonTest
+
+# add pyspark support
+poetry add pyspark
+
+# add chispa as dev dependencies, which will not be added to the production build
+poetry add chispa --dev
 ```
+For more information on poetry cli, you can visit this page: https://python-poetry.org/docs/cli/
 
 This will create a python project with the following contents:
 ```shell
@@ -39,6 +46,9 @@ PythonTest
     __init__.py
     test_pythontest.py
 ```
+
+And all the project meta data(e.g. dependencies, build instructions, project info, etc.) are located at pyproject.toml
+
 ## 2. Test your functions
 In spark, we normally has two type of functions:
 1. transform a data frame by adding some new columns.
@@ -49,19 +59,22 @@ So basically, we have two types of test:
 2. Data frame equality test: Check if the generated data frame equal the expected data frame.
 
 ### 2.1 Column equality test
-You can find the function **createColumnWithPower** in Object **src.main.scala.org.pengfei.ColumnCreator**. 
-It takes a digit column and generate a new column which is the power 2 of the source column.
-In unit test class **src.test.scala.org.pengfei.TestColumnCreator**. We test the function **createColumnWithPower**.
 
-We mainly used two method:
-1. assertColumnEquality : general equality test on any column type
-2. assertDoubleTypeColumnEquality : if column type is float or double, we may have precision issues. With this method, 
+We mainly used two methods from chispa.column_comparer:
+1. assert_column_equality : general equality test on any column type
+2. assert_approx_column_equality : if column type is float or double, we may have precision issues. With this method, 
          we can set a precision for the values which we want to compare. 
 
+You can find the test function **test_remove_special_letter_native** in class **tests/test_CleanUserName** which 
+illustrates the assert_column_equality.
+
+You can find the test function **test_create_column_with_approximate_column_equality** in class **tests/test_PowerTwo** 
+which illustrates the assert_approx_column_equality.
+
 ### 2.2 Data frame equality test
-To test equality of two data frames, we use two method:
-1. assertSmallDatasetEquality : It is faster for test DataFrames that locates on your local machine. 
-2. assertLargeDatasetEquality : It is more optimal for DataFrames that are split across nodes in a cluster.
+To test equality of two data frames, we mainly use two method from chispa.dataframe_comparer import ,:
+1. assert_df_equality : It is faster for test DataFrames that locates on your local machine. 
+2. assert_approx_df_equality : It is more optimal for DataFrames that are split across nodes in a cluster.
 
 #### 2.2.1 Data frame schema mismatch
 These two method check first the equality of the schema. As the schema of spark has three properties:
@@ -73,14 +86,14 @@ are created, **the Nullable properties can be true or false**. In most of time, 
 of data frames. 
 
 To ignore the nullable flag 
-```scala
-assertSmallDatasetEquality(sourceDF, expectedDF, ignoreNullable = true)
+```python
+assert_df_equality(actual_df, expected_df, ignore_nullable=True)
 ```
 
 #### 2.2.2 Unordered DataFrame equality comparisons
 
 For most of the time, the row order does not affect the equality of two data frames. For example, DF1 should equal DF2.
-But if we just use **assertSmallDatasetEquality**, it will return a mismatch error
+But if we just use **assert_df_equality**, it will return a mismatch error
 ```shell script
 # DF1:
 +------+
@@ -97,13 +110,19 @@ But if we just use **assertSmallDatasetEquality**, it will return a mismatch err
 |     1|
 +------+
 ``` 
-So we want to ignore the row order, we can set the **orderedComparison** boolean flag to false and 
-spark-fast-tests will sort the DataFrames before performing the comparison.
 
-```scala
-assertSmallDataFrameEquality(sourceDF, expectedDF, orderedComparison = false)
+Same for the column order, for example if we have two dataframe, one is ["name","age"], the other one is ["age","name"].
+The **assert_df_equality** will return a mismatch error.
+
+So we want to ignore the row order and/or column order, we can set the **ignore_row_order** and/or **ignore_row_order**
+boolean flag to True and assert_df_equality will sort the DataFrames before performing the comparison.
+
+```python
+assert_df_equality(actual_df, expected_df, ignore_row_order= True,ignore_column_order= True)
+
 ```     
-For complete code example, please check **src/test/scala/TestAddGreetings**                           
+For complete code example, please check **tests/test_PowerTwo.test_df_ignore_row_order(spark)**
+
 #### 2.2.3 Approximate DataFrame Equality
 As we mentioned before, if the data frame has float or double column, when we compare them, we need to specify a
 precision. For example, if we compare the two below data frame.  
@@ -130,33 +149,30 @@ precision. For example, if we compare the two below data frame.
 
 ```scala
 // If set precision to 0.1, this will return true
-assertApproximateDataFrameEquality(DF1, DF2, 0.1,ignoreNullable = true)
+assert_approx_df_equality(actual_df, expected_df, 0.1)
 
 //If set precision to 0.1, this will return false
-assertApproximateDataFrameEquality(DF1, DF2, 0.01,ignoreNullable = true)
+assert_approx_df_equality(actual_df, expected_df, 0.o1)
 ```
 
-For complete code example, please check **src/test/scala/TestColumnCreator** 
+For complete code example, please check **tests/TestPowerTwo.test_create_column_with_approximate_df_equality** 
 
 ## 3. Creat SparkSession for your test environment
 
-The spark-fast-tests framework doesn't provide a SparkSession object in your test suite, so you'll need to make 
-one yourself.
+The chispa framework doesn't provide a SparkSession for your test suite, so you'll need to make one yourself. For now,
+we use a pytest fixture
 
-```scala
-import org.apache.spark.sql.SparkSession
-trait SparkSessionTestWrapper {
+```python
+import pytest
+from pyspark.sql import SparkSession
 
-  lazy val spark: SparkSession = {
-    SparkSession
-      .builder()
-      .master("local[*]")
-      .appName("spark session for test env")
-      .config("spark.sql.shuffle.partitions", "1")
-      .getOrCreate()
-  }
 
-}
+@pytest.fixture(scope='session')
+def spark():
+    return SparkSession.builder
+        .master("local")
+        .appName("PySparkUnitTest")
+        .getOrCreate()
 ```
 
 Note in your local test environment, it's better to set the number of shuffle partitions to a small number like one 
