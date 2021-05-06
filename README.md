@@ -1,6 +1,6 @@
 # PySparkUnitTest
 
-This project shows how to do unit testing on pyspark project. For testing spark(scala), please visit this project
+This project shows how to do unit testing on a pyspark project. For testing a spark(scala) project, please visit this project
 https://github.com/pengfei99/SparkScalaUnitTest. The unit testing can help you to avoid run sample data sets to 
 develop code on a cluster. Because clusters are slow to start and may cost you money. 
 
